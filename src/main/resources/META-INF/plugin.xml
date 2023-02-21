@@ -1,0 +1,40 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
+    <id>com.lishidong.idea.plugin.FavExport</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
+    <name>FavExport</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor email="996479960@qq.com" url="https://#">lishidongol</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
+    <description><![CDATA[
+    收藏和打包.<br>
+    <em>1.收藏任意位置文件</em>
+    <em>2.分类和模块管理</em>
+    <em>3.导出选中的文件</em>
+    <em>4.编译选中的Java源文件</em>
+    <em>5.将Java源文件打成Jar包</em>
+  ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <!-- Extension points defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <projectService serviceImplementation="com.lishidong.idea.plugin.favexport.model.ConfigManager"/>
+        <toolWindow  factoryClass="com.lishidong.idea.plugin.favexport.UI.FavToolWindow" id="收藏"/>
+    </extensions>
+    <actions>
+        <action id="TestButton" class="com.lishidong.idea.plugin.favexport.action.TestButton" text="TestButton">
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+        </action>
+    </actions>
+</idea-plugin>
