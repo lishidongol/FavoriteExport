@@ -30,6 +30,10 @@ public class FileMutableTreeNode extends DefaultMutableTreeNode {
         return this.file.getName();
     }
 
+    public String getFilepath() {
+        return this.getFilepath();
+    }
+
     @Override
     public String toString() {
         if (file != null) {

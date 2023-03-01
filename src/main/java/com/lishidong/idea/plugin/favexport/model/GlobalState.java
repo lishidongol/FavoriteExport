@@ -6,16 +6,14 @@ import com.intellij.openapi.components.Storage;
 import com.intellij.openapi.components.StoragePathMacros;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
-import com.intellij.util.xmlb.Converter;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.xmlb.XmlSerializerUtil;
-import com.intellij.util.xmlb.annotations.OptionTag;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.tree.DefaultMutableTreeNode;
-import java.io.*;
+import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 
 /**
@@ -28,7 +26,6 @@ public class GlobalState implements PersistentStateComponent<GlobalState>, Seria
     public List<String> categorys = new ArrayList<>();
     public List<String> modules = new ArrayList<>();
 
-    @OptionTag(nameAttribute = "", valueAttribute = "files", converter = FavoriteFileConverter.class)
     public List<FavoriteFile> files = new ArrayList<>();
 
     public static GlobalState getInstance(Project project) {
@@ -42,8 +39,10 @@ public class GlobalState implements PersistentStateComponent<GlobalState>, Seria
      */
     public DefaultMutableTreeNode getFileTreeNode() {
         files.clear();
+        VirtualFile fileByPath = LocalFileSystem.getInstance().findFileByPath("C:/Users/OOO/IdeaProjects/untitled1/src/Test.java");
         // 添加一个文件
-        files.add(new FavoriteFile("11", "web", LocalFileSystem.getInstance().findFileByPath("C:/Users/OOO/IdeaProjects/untitled1/src/Test.java")));
+        files.add(new FavoriteFile("11", "web", fileByPath.getName(), fileByPath.getPath()));
+        files.add(new FavoriteFile("33", "biz", fileByPath.getName(), fileByPath.getPath()));
 
         FileMutableTreeNode root = new FileMutableTreeNode("root");
         if (categorys != null && !categorys.isEmpty()) {
@@ -59,8 +58,9 @@ public class GlobalState implements PersistentStateComponent<GlobalState>, Seria
                         if (files != null && !files.isEmpty()) {
                             for (int i2 = 0; i2 < files.size(); i2++) {
                                 if (categorys.get(i).equals(files.get(i2).getCategory()) && modules.get(i1).equals(files.get(i2).getModule())) {
+                                    VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(files.get(i2).getFilepath());
                                     // 添加文件
-                                    FileMutableTreeNode fileNode = new FileMutableTreeNode(categorys.get(i), modules.get(i1), files.get(i2).getFile());
+                                    FileMutableTreeNode fileNode = new FileMutableTreeNode(categorys.get(i), modules.get(i1), virtualFile);
                                     fileNode.setAllowsChildren(false);
                                     moduleNode.add(fileNode);
                                 }
@@ -85,49 +85,5 @@ public class GlobalState implements PersistentStateComponent<GlobalState>, Seria
     @Override
     public void loadState(@NotNull GlobalState state) {
         XmlSerializerUtil.copyBean(state, this);
-    }
-
-    static final class FavoriteFileConverter extends Converter<List<FavoriteFile>> {
-
-        @Override
-        public @Nullable List<FavoriteFile> fromString(@NotNull String value) {
-            try {
-                // 使用Base64解码将字符串转换为字节数组
-                byte[] bytes = Base64.getDecoder().decode(value);
-                // 创建一个字节数组输入流
-                ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-                // 创建一个对象输入流
-                ObjectInputStream ois = new ObjectInputStream(bais);
-                // 从对象输入流中读取数据模型
-                List<FavoriteFile> treeModel = (List<FavoriteFile>) ois.readObject();
-                // 关闭对象输入流
-                ois.close();
-                return treeModel;
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        @Override
-        public @Nullable String toString(@NotNull List<FavoriteFile> value) {
-            try {
-                // 创建一个字节数组输出流
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                // 创建一个对象输出流
-                ObjectOutputStream oos = new ObjectOutputStream(baos);
-                // 将数据模型写入对象输出流
-                oos.writeObject(value);
-                // 关闭对象输出流
-                oos.close();
-                // 使用Base64编码将字节数组转换为字符串
-                return Base64.getEncoder().encodeToString(baos.toByteArray());
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
     }
 }
