@@ -29,12 +29,17 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <projectService serviceImplementation="com.lishidong.idea.plugin.favexport.model.ConfigManager"/>
-        <toolWindow  factoryClass="com.lishidong.idea.plugin.favexport.UI.FavToolWindow" id="收藏"/>
+        <projectService serviceImplementation="com.lishidong.idea.plugin.favexport.model.GlobalState"/>
+        <toolWindow factoryClass="com.lishidong.idea.plugin.favexport.UI.FavoriteToolWindow"
+                    icon="AllIcons.Nodes.Favorite" id="MyFavorite"/>
     </extensions>
     <actions>
         <action id="TestButton" class="com.lishidong.idea.plugin.favexport.action.TestButton" text="TestButton">
             <add-to-group group-id="ToolsMenu" anchor="first"/>
+        </action>
+        <action id="FavoredFileAction" class="com.lishidong.idea.plugin.favexport.action.FavoredFileAction"
+                text="收藏文件">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
         </action>
     </actions>
 </idea-plugin>
