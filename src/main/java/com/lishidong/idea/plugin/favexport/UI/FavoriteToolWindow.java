@@ -12,7 +12,6 @@ import com.intellij.ui.components.JBList;
 import com.intellij.ui.content.ContentFactory;
 import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.IconUtil;
-import com.lishidong.idea.plugin.favexport.model.FavoriteFile;
 import com.lishidong.idea.plugin.favexport.model.FileMutableTreeNode;
 import com.lishidong.idea.plugin.favexport.model.GlobalState;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +23,8 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
-import java.util.Iterator;
+import javax.swing.tree.TreeNode;
+import java.util.Enumeration;
 import java.util.List;
 
 /**
@@ -32,14 +32,14 @@ import java.util.List;
  */
 public class FavoriteToolWindow implements ToolWindowFactory {
 
-    private ContentFactory contentFactory = ContentFactory.SERVICE.getInstance();
+    private final ContentFactory contentFactory = ContentFactory.SERVICE.getInstance();
 
-    private JBList categoryList = new JBList();
-    private JBList moduleList = new JBList();
-    private Tree fileTree = new Tree();
-    private DefaultListModel categoryListModel = new DefaultListModel();
-    private DefaultListModel moduleListModel = new DefaultListModel();
-    private DefaultTreeModel fileTreeModel = new DefaultTreeModel(new DefaultMutableTreeNode("root"));
+    private final JBList categoryList = new JBList();
+    private final JBList moduleList = new JBList();
+    private final Tree fileTree = new Tree();
+    private final DefaultListModel categoryListModel = new DefaultListModel();
+    private final DefaultListModel moduleListModel = new DefaultListModel();
+    private final DefaultTreeModel fileTreeModel = new DefaultTreeModel(new DefaultMutableTreeNode("root"));
 
     private static void showInfo(String msg) {
         Messages.showMessageDialog(msg, "提示", Messages.getInformationIcon());
@@ -124,13 +124,8 @@ public class FavoriteToolWindow implements ToolWindowFactory {
                 Object selectedValue = categoryList.getSelectedValue();
                 GlobalState instance = GlobalState.getInstance(project);
                 // 删除关联目录的文件
-                Iterator<FavoriteFile> iterator = instance.files.iterator();
-                while (iterator.hasNext()) {
-                    FavoriteFile next = iterator.next();
-                    if (String.valueOf(selectedValue).equals(next.getCategory())) {
-                        iterator.remove();
-                    }
-                }
+                instance.files.removeIf(next -> String.valueOf(selectedValue).equals(next.getCategory()));
+
                 categoryListModel.removeElementAt(selectedIndex);
                 instance.categorys.remove(selectedIndex);
                 // 更新文件树
@@ -226,13 +221,7 @@ public class FavoriteToolWindow implements ToolWindowFactory {
                 Object selectedValue = moduleList.getSelectedValue();
                 GlobalState instance = GlobalState.getInstance(project);
                 // 删除关联目录的文件
-                Iterator<FavoriteFile> iterator = instance.files.iterator();
-                while (iterator.hasNext()) {
-                    FavoriteFile next = iterator.next();
-                    if (String.valueOf(selectedValue).equals(next.getModule())) {
-                        iterator.remove();
-                    }
-                }
+                instance.files.removeIf(next -> String.valueOf(selectedValue).equals(next.getModule()));
 
                 moduleListModel.removeElementAt(selectedIndex);
                 instance.modules.remove(selectedIndex);
@@ -278,49 +267,46 @@ public class FavoriteToolWindow implements ToolWindowFactory {
                 if (lastSelectedPathComponent != null) {
                     if (lastSelectedPathComponent.file != null) {
                         // 文件,删除对应文件名称文件，并刷新目录树
-                        Iterator<FavoriteFile> iterator = GlobalState.getInstance(project).files.iterator();
-                        while (iterator.hasNext()) {
-                            FavoriteFile favoriteFile = iterator.next();
-                            if (lastSelectedPathComponent.category.equals(favoriteFile.getCategory())
-                                    && lastSelectedPathComponent.module.equals(favoriteFile.getModule())
-                                    && lastSelectedPathComponent.getFileName().equals(favoriteFile.getFile().getName())) {
-                                iterator.remove();
-                            }
-                        }
+                        GlobalState.getInstance(project).files.removeIf(favoriteFile -> lastSelectedPathComponent.category.equals(favoriteFile.getCategory())
+                                && lastSelectedPathComponent.module.equals(favoriteFile.getModule())
+                                && lastSelectedPathComponent.getFilepath().equals(favoriteFile.getFilepath()));
+                        // 更新树节点
                         fileTreeModel.removeNodeFromParent(lastSelectedPathComponent);
                     }
                     else if (!StringUtil.isEmptyOrSpaces(lastSelectedPathComponent.module)) {
                         // 删除模块下的文件
-                        Iterator<FavoriteFile> iterator = GlobalState.getInstance(project).files.iterator();
-                        while (iterator.hasNext()) {
-                            FavoriteFile favoriteFile = iterator.next();
-                            if (lastSelectedPathComponent.category.equals(favoriteFile.getCategory())
-                                    && lastSelectedPathComponent.module.equals(favoriteFile.getModule())) {
-                                iterator.remove();
-                                fileTreeModel.removeNodeFromParent(new FileMutableTreeNode(favoriteFile.getCategory(), favoriteFile.getModule(), favoriteFile.getFile()));
-                            }
+                        GlobalState.getInstance(project).files.removeIf(favoriteFile -> lastSelectedPathComponent.category.equals(favoriteFile.getCategory())
+                                && lastSelectedPathComponent.module.equals(favoriteFile.getModule()));
+                        // 更新树节点
+                        Enumeration<TreeNode> children = lastSelectedPathComponent.children();
+                        while (children.hasMoreElements()) {
+                            fileTreeModel.removeNodeFromParent((FileMutableTreeNode) children.nextElement());
                         }
                     }
                     else if (!StringUtil.isEmptyOrSpaces(lastSelectedPathComponent.category)) {
                         // 删除目录模块下的文件
-                        Iterator<FavoriteFile> iterator = GlobalState.getInstance(project).files.iterator();
-                        while (iterator.hasNext()) {
-                            FavoriteFile favoriteFile = iterator.next();
-                            if (lastSelectedPathComponent.category.equals(favoriteFile.getCategory())) {
-                                iterator.remove();
-                                fileTreeModel.removeNodeFromParent(new FileMutableTreeNode(favoriteFile.getCategory(), favoriteFile.getModule(), favoriteFile.getFile()));
+                        GlobalState.getInstance(project).files.removeIf(favoriteFile -> lastSelectedPathComponent.category.equals(favoriteFile.getCategory()));
+                        // 模块级别
+                        Enumeration<TreeNode> children = lastSelectedPathComponent.children();
+                        while (children.hasMoreElements()) {
+                            // 文件级别
+                            Enumeration<? extends TreeNode> childrenChildren = children.nextElement().children();
+                            while (childrenChildren.hasMoreElements()) {
+                                fileTreeModel.removeNodeFromParent((FileMutableTreeNode) childrenChildren.nextElement());
                             }
                         }
                     }
                 }
-
             }
         });
         // 刷新按钮
         defaultActionGroup.add(new AnAction(AllIcons.Actions.Refresh) {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
-                fileTreeModel.reload(GlobalState.getInstance(project).getFileTreeNode());
+                // 删除所有节点
+                ((FileMutableTreeNode) fileTreeModel.getRoot()).removeAllChildren();
+                // 重新加载
+                fileTreeModel.setRoot(GlobalState.getInstance(project).getFileTreeNode());
             }
         });
 
