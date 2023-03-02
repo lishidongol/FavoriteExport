@@ -8,7 +8,9 @@ import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
+import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBList;
+import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.content.ContentFactory;
 import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.IconUtil;
@@ -18,13 +20,15 @@ import com.lishidong.idea.plugin.favexport.model.GlobalState;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import javax.swing.event.TreeModelEvent;
-import javax.swing.event.TreeModelListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
+import java.awt.*;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -160,11 +164,16 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
                 categoryListModel.addElement(categorys.get(i));
             }
         }
-
+        categoryList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Icon getIcon() {
+                return AllIcons.Nodes.Folder;
+            }
+        });
         // 定义目录列表
         categoryList.setModel(categoryListModel);
 
-        simpleToolWindowPanel.setContent(categoryList);
+        simpleToolWindowPanel.setContent(new JBScrollPane(categoryList));
         return simpleToolWindowPanel;
     }
 
@@ -254,11 +263,16 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
                 moduleListModel.addElement(modules.get(i));
             }
         }
-
+        moduleList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Icon getIcon() {
+                return AllIcons.Nodes.Folder;
+            }
+        });
         // 定义目录列表
         moduleList.setModel(moduleListModel);
 
-        simpleToolWindowPanel.setContent(moduleList);
+        simpleToolWindowPanel.setContent(new JBScrollPane(moduleList));
         return simpleToolWindowPanel;
     }
 
@@ -345,29 +359,47 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
             }
         });
 
-        fileTreeModel.addTreeModelListener(new TreeModelListener() {
+        fileTree.setCellRenderer(new DefaultTreeCellRenderer() {
             @Override
-            public void treeNodesChanged(TreeModelEvent e) {
-                System.out.println("treeNodesChanged");
-            }
-
-            @Override
-            public void treeNodesInserted(TreeModelEvent e) {
-                System.out.println("treeNodesInserted");
-            }
-
-            @Override
-            public void treeNodesRemoved(TreeModelEvent e) {
-                System.out.println("treeNodesRemoved");
-            }
-
-            @Override
-            public void treeStructureChanged(TreeModelEvent e) {
-                System.out.println("treeStructureChanged");
+            public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded, boolean leaf, int row, boolean hasFocus) {
+                FileMutableTreeNode fileMutableTreeNode = (FileMutableTreeNode) value;
+                if (fileMutableTreeNode.file != null) {
+                    return new JBLabel(fileMutableTreeNode.file.getName(), fileMutableTreeNode.file.getFileType().getIcon(), 2);
+                }
+                else {
+                    return new JBLabel(fileMutableTreeNode.toString(), AllIcons.Nodes.Folder, 2);
+                }
             }
         });
 
-        simpleToolWindowPanel.setContent(fileTree);
+        fileTree.addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+
+            }
+        });
+
+        simpleToolWindowPanel.setContent(new JBScrollPane(fileTree));
         return simpleToolWindowPanel;
     }
 

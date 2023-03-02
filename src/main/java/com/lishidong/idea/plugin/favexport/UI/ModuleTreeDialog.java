@@ -1,5 +1,6 @@
 package com.lishidong.idea.plugin.favexport.UI;
 
+import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.project.Project;
@@ -54,6 +55,12 @@ public class ModuleTreeDialog extends DialogWrapper {
         DefaultMutableTreeNode moduleTreeNode = GlobalState.getInstance(project).getModuleTreeNode();
         moduleTreeModel.setRoot(moduleTreeNode);
         moduleTree.setModel(moduleTreeModel);
+        moduleTree.setCellRenderer(new DefaultTreeCellRenderer() {
+            @Override
+            public Icon getIcon() {
+                return AllIcons.Nodes.Folder;
+            }
+        });
         // 设置单选模式
         DefaultTreeSelectionModel defaultTreeSelectionModel = new DefaultTreeSelectionModel();
         defaultTreeSelectionModel.setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
