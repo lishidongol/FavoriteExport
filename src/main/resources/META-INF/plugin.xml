@@ -8,7 +8,7 @@
     <name>FavExport</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="996479960@qq.com" url="https://#">lishidongol</vendor>
+    <vendor email="996479960@qq.com" url="https://github.com/lishidongol/FavoriteExport">lishidongol</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
@@ -40,6 +40,22 @@
         <action id="FavoredFileAction" class="com.lishidong.idea.plugin.favexport.action.FavoredFileAction"
                 text="收藏文件">
             <add-to-group group-id="ProjectViewPopupMenu" anchor="first"/>
+            <add-to-group group-id="ChangesViewPopupMenu" anchor="first"/>
+            <add-to-group group-id="PopupMenuActions" anchor="first"/>
+            <add-to-group group-id="Vcs.RepositoryChangesBrowserMenu" anchor="first"/>
+            <add-to-group group-id="Vcs.FileHistory.ContextMenu" anchor="first"/>
+            <add-to-group group-id="Vcs.Log.ChangesBrowser.Popup" anchor="first"/>
         </action>
     </actions>
+
+    <projectListeners>
+        <!--<listener
+                class="com.lishidong.idea.plugin.favexport.MyToolWindowListener"
+                topic="com.lishidong.idea.plugin.favexport.listener.FilesChangeListener"/>-->
+
+        <!--<listener
+                class="com.lishidong.idea.plugin.favexport.UI.FavoriteToolWindow"
+                topic="com.lishidong.idea.plugin.favexport.listener.FilesChangeListener"/>-->
+    </projectListeners>
+
 </idea-plugin>

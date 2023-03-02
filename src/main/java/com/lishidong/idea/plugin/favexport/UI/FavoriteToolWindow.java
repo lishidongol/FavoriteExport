@@ -12,6 +12,7 @@ import com.intellij.ui.components.JBList;
 import com.intellij.ui.content.ContentFactory;
 import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.IconUtil;
+import com.lishidong.idea.plugin.favexport.listener.FilesChangeListener;
 import com.lishidong.idea.plugin.favexport.model.FileMutableTreeNode;
 import com.lishidong.idea.plugin.favexport.model.GlobalState;
 import org.jetbrains.annotations.NotNull;
@@ -30,7 +31,7 @@ import java.util.List;
 /**
  * 左侧
  */
-public class FavoriteToolWindow implements ToolWindowFactory {
+public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListener {
 
     private final ContentFactory contentFactory = ContentFactory.SERVICE.getInstance();
 
@@ -41,18 +42,33 @@ public class FavoriteToolWindow implements ToolWindowFactory {
     private final DefaultListModel moduleListModel = new DefaultListModel();
     private final DefaultTreeModel fileTreeModel = new DefaultTreeModel(new DefaultMutableTreeNode("root"));
 
+    private Project project;
+
     private static void showInfo(String msg) {
         Messages.showMessageDialog(msg, "提示", Messages.getInformationIcon());
     }
 
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
+        this.project = project;
         SimpleToolWindowPanel categoryPanel = createCategoryPanel(project);
         toolWindow.getContentManager().addContent(contentFactory.createContent(categoryPanel, "目录", true));
         SimpleToolWindowPanel modulePanel = createModulePanel(project);
         toolWindow.getContentManager().addContent(contentFactory.createContent(modulePanel, "模块", true));
         SimpleToolWindowPanel fileTreePanel = createFileTreePanel(project);
         toolWindow.getContentManager().addContent(contentFactory.createContent(fileTreePanel, "文件", true));
+
+        // 创建事件监听
+        this.project.getMessageBus().connect().subscribe(FilesChangeListener.TOPIC, this);
+    }
+
+    /**
+     * 刷新文件树
+     */
+    public void refreshFileTree() {
+        // 更新文件树
+        ((DefaultMutableTreeNode) fileTreeModel.getRoot()).removeAllChildren();
+        fileTreeModel.setRoot(GlobalState.getInstance(project).getFileTreeNode());
     }
 
     /**
@@ -80,8 +96,7 @@ public class FavoriteToolWindow implements ToolWindowFactory {
                         categoryListModel.addElement(input);
                         instance.categorys.add(input);
                         // 更新文件树
-                        ((DefaultMutableTreeNode) fileTreeModel.getRoot()).removeAllChildren();
-                        fileTreeModel.setRoot(instance.getFileTreeNode());
+                        refreshFileTree();
                     }
                 }
             }
@@ -110,8 +125,7 @@ public class FavoriteToolWindow implements ToolWindowFactory {
                             }
                         }
                         // 更新文件树
-                        ((DefaultMutableTreeNode) fileTreeModel.getRoot()).removeAllChildren();
-                        fileTreeModel.setRoot(instance.getFileTreeNode());
+                        refreshFileTree();
                     }
                 }
             }
@@ -129,8 +143,7 @@ public class FavoriteToolWindow implements ToolWindowFactory {
                 categoryListModel.removeElementAt(selectedIndex);
                 instance.categorys.remove(selectedIndex);
                 // 更新文件树
-                ((DefaultMutableTreeNode) fileTreeModel.getRoot()).removeAllChildren();
-                fileTreeModel.setRoot(instance.getFileTreeNode());
+                refreshFileTree();
             }
         });
         ActionToolbar actionToolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLWINDOW_CONTENT, defaultActionGroup, true);
@@ -176,8 +189,7 @@ public class FavoriteToolWindow implements ToolWindowFactory {
                         moduleListModel.addElement(input);
                         instance.modules.add(input);
                         // 更新文件树
-                        ((DefaultMutableTreeNode) fileTreeModel.getRoot()).removeAllChildren();
-                        fileTreeModel.setRoot(instance.getFileTreeNode());
+                        refreshFileTree();
                     }
                 }
             }
@@ -207,8 +219,7 @@ public class FavoriteToolWindow implements ToolWindowFactory {
                             }
                         }
                         // 更新文件树
-                        ((DefaultMutableTreeNode) fileTreeModel.getRoot()).removeAllChildren();
-                        fileTreeModel.setRoot(instance.getFileTreeNode());
+                        refreshFileTree();
                     }
                 }
             }
@@ -226,8 +237,7 @@ public class FavoriteToolWindow implements ToolWindowFactory {
                 moduleListModel.removeElementAt(selectedIndex);
                 instance.modules.remove(selectedIndex);
                 // 更新文件树
-                ((DefaultMutableTreeNode) fileTreeModel.getRoot()).removeAllChildren();
-                fileTreeModel.setRoot(instance.getFileTreeNode());
+                refreshFileTree();
             }
         });
         ActionToolbar actionToolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLWINDOW_CONTENT, defaultActionGroup, true);
@@ -303,10 +313,8 @@ public class FavoriteToolWindow implements ToolWindowFactory {
         defaultActionGroup.add(new AnAction(AllIcons.Actions.Refresh) {
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
-                // 删除所有节点
-                ((FileMutableTreeNode) fileTreeModel.getRoot()).removeAllChildren();
-                // 重新加载
-                fileTreeModel.setRoot(GlobalState.getInstance(project).getFileTreeNode());
+                // 刷新文件树
+                refreshFileTree();
             }
         });
 
@@ -354,4 +362,9 @@ public class FavoriteToolWindow implements ToolWindowFactory {
         return simpleToolWindowPanel;
     }
 
+
+    @Override
+    public void filesChange() {
+        refreshFileTree();
+    }
 }

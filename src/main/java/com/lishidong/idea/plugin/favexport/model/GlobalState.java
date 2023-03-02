@@ -38,12 +38,6 @@ public class GlobalState implements PersistentStateComponent<GlobalState>, Seria
      * @return
      */
     public DefaultMutableTreeNode getFileTreeNode() {
-        files.clear();
-        VirtualFile fileByPath = LocalFileSystem.getInstance().findFileByPath("C:/Users/OOO/IdeaProjects/untitled1/src/Test.java");
-        // 添加一个文件
-        files.add(new FavoriteFile("11", "web", fileByPath.getName(), fileByPath.getPath()));
-        files.add(new FavoriteFile("33", "biz", fileByPath.getName(), fileByPath.getPath()));
-
         FileMutableTreeNode root = new FileMutableTreeNode("root");
         if (categorys != null && !categorys.isEmpty()) {
             for (int i = 0; i < categorys.size(); i++) {
@@ -66,6 +60,34 @@ public class GlobalState implements PersistentStateComponent<GlobalState>, Seria
                                 }
                             }
                         }
+                        // 模块添加到目录节点
+                        categoryNode.add(moduleNode);
+                    }
+                }
+                // 目录添加到跟根节点
+                root.add(categoryNode);
+            }
+        }
+        return root;
+    }
+
+    /**
+     * 模块树
+     *
+     * @return
+     */
+    public DefaultMutableTreeNode getModuleTreeNode() {
+        FileMutableTreeNode root = new FileMutableTreeNode("root");
+        if (categorys != null && !categorys.isEmpty()) {
+            for (int i = 0; i < categorys.size(); i++) {
+                // 添加目录
+                FileMutableTreeNode categoryNode = new FileMutableTreeNode(categorys.get(i));
+                categoryNode.setAllowsChildren(true);
+                if (modules != null && !modules.isEmpty()) {
+                    for (int i1 = 0; i1 < modules.size(); i1++) {
+                        // 添加模块
+                        FileMutableTreeNode moduleNode = new FileMutableTreeNode(categorys.get(i), modules.get(i1));
+                        moduleNode.setAllowsChildren(false);
                         // 模块添加到目录节点
                         categoryNode.add(moduleNode);
                     }
