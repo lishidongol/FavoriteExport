@@ -4,6 +4,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.treeStructure.Tree;
@@ -14,10 +15,12 @@ import com.lishidong.idea.plugin.favexport.model.GlobalState;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.DefaultTreeSelectionModel;
-import javax.swing.tree.TreeSelectionModel;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.tree.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 模块选择
@@ -38,6 +41,7 @@ public class ModuleTreeDialog extends DialogWrapper {
         super(project);
         this.project = project;
         init();
+        setOKActionEnabled(false);
     }
 
     public void setActionEvent(AnActionEvent actionEvent) {
@@ -55,25 +59,74 @@ public class ModuleTreeDialog extends DialogWrapper {
         defaultTreeSelectionModel.setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
         moduleTree.setSelectionModel(defaultTreeSelectionModel);
         moduleTree.setRootVisible(false);
+        moduleTree.addTreeSelectionListener(new TreeSelectionListener() {
+            @Override
+            public void valueChanged(TreeSelectionEvent e) {
+                TreePath path = e.getPath();
+                if (path.getPathCount() != 3) {
+                    setOKActionEnabled(false);
+                }
+                else {
+                    setOKActionEnabled(true);
+                }
+            }
+        });
         panel.setViewportView(moduleTree);
         return panel;
     }
 
     @Override
     protected void doOKAction() {
-        // 确定选择的模块节点
-        FileMutableTreeNode fileMutableTreeNode = (FileMutableTreeNode) moduleTree.getLastSelectedPathComponent();
         // 获取选择的文件
         VirtualFile[] chooseFiles = actionEvent.getData(PlatformDataKeys.VIRTUAL_FILE_ARRAY);
         if (chooseFiles != null && chooseFiles.length > 0) {
-            GlobalState instance = GlobalState.getInstance(project);
+            // 先检查是否选择了目录
             for (VirtualFile chooseFile : chooseFiles) {
-                // 添加到文件树
-                instance.files.add(new FavoriteFile(fileMutableTreeNode.category, fileMutableTreeNode.module, chooseFile.getName(), chooseFile.getPath()));
+                if (chooseFile.isDirectory()) {
+                    Messages.showMessageDialog("不支持收藏目录!", "提示", Messages.getInformationIcon());
+                    super.doOKAction();
+                    return;
+                }
             }
-            // 刷新文件树
-            project.getMessageBus().syncPublisher(FilesChangeListener.TOPIC).filesChange();
+
+            // 确定选择的模块节点
+            FileMutableTreeNode fileMutableTreeNode = (FileMutableTreeNode) moduleTree.getLastSelectedPathComponent();
+
+            GlobalState instance = GlobalState.getInstance(project);
+            List<FavoriteFile> files = instance.files;
+            List<FavoriteFile> addFav = new ArrayList<>();
+            // 判断选择的模块下是否存在文件
+            List<FavoriteFile> collect = files.stream()
+                    .filter(f -> fileMutableTreeNode.category.equals(f.getCategory()) && fileMutableTreeNode.module.equals(f.getModule()))
+                    .collect(Collectors.toList());
+            if (!collect.isEmpty()) {
+                for (VirtualFile chooseFile : chooseFiles) {
+                    boolean isExists = false;
+                    for (FavoriteFile file : collect) {
+                        if (file.getFilepath().equals(chooseFile.getPath())) {
+                            isExists = true;
+                            break;
+                        }
+                    }
+                    if (!isExists) {
+                        // 添加
+                        addFav.add(new FavoriteFile(fileMutableTreeNode.category, fileMutableTreeNode.module, chooseFile.getName(), chooseFile.getPath()));
+                    }
+                }
+            }
+            else {
+                // 选择的全部添加
+                for (VirtualFile chooseFile : chooseFiles) {
+                    addFav.add(new FavoriteFile(fileMutableTreeNode.category, fileMutableTreeNode.module, chooseFile.getName(), chooseFile.getPath()));
+                }
+            }
+            if (!addFav.isEmpty()) {
+                instance.files.addAll(addFav);
+                // 刷新文件树
+                project.getMessageBus().syncPublisher(FilesChangeListener.TOPIC).filesChange();
+            }
         }
+        setOKActionEnabled(true);
         super.doOKAction();
     }
 }

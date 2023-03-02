@@ -25,7 +25,9 @@ import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -135,15 +137,17 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
             @Override
             public void actionPerformed(@NotNull AnActionEvent e) {
                 int selectedIndex = categoryList.getSelectedIndex();
-                Object selectedValue = categoryList.getSelectedValue();
-                GlobalState instance = GlobalState.getInstance(project);
-                // 删除关联目录的文件
-                instance.files.removeIf(next -> String.valueOf(selectedValue).equals(next.getCategory()));
+                if (selectedIndex != -1) {
+                    Object selectedValue = categoryList.getSelectedValue();
+                    GlobalState instance = GlobalState.getInstance(project);
+                    // 删除关联目录的文件
+                    instance.files.removeIf(next -> String.valueOf(selectedValue).equals(next.getCategory()));
 
-                categoryListModel.removeElementAt(selectedIndex);
-                instance.categorys.remove(selectedIndex);
-                // 更新文件树
-                refreshFileTree();
+                    categoryListModel.removeElementAt(selectedIndex);
+                    instance.categorys.remove(selectedIndex);
+                    // 更新文件树
+                    refreshFileTree();
+                }
             }
         });
         ActionToolbar actionToolbar = ActionManager.getInstance().createActionToolbar(ActionPlaces.TOOLWINDOW_CONTENT, defaultActionGroup, true);
@@ -288,21 +292,26 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
                         GlobalState.getInstance(project).files.removeIf(favoriteFile -> lastSelectedPathComponent.category.equals(favoriteFile.getCategory())
                                 && lastSelectedPathComponent.module.equals(favoriteFile.getModule()));
                         // 更新树节点
-                        Enumeration<TreeNode> children = lastSelectedPathComponent.children();
-                        while (children.hasMoreElements()) {
-                            fileTreeModel.removeNodeFromParent((FileMutableTreeNode) children.nextElement());
-                        }
+                        lastSelectedPathComponent.removeAllChildren();
+                        fileTreeModel.reload(lastSelectedPathComponent);
                     }
                     else if (!StringUtil.isEmptyOrSpaces(lastSelectedPathComponent.category)) {
                         // 删除目录模块下的文件
                         GlobalState.getInstance(project).files.removeIf(favoriteFile -> lastSelectedPathComponent.category.equals(favoriteFile.getCategory()));
                         // 模块级别
                         Enumeration<TreeNode> children = lastSelectedPathComponent.children();
+                        List<FileMutableTreeNode> removeList = new ArrayList<>();
                         while (children.hasMoreElements()) {
                             // 文件级别
-                            Enumeration<? extends TreeNode> childrenChildren = children.nextElement().children();
-                            while (childrenChildren.hasMoreElements()) {
-                                fileTreeModel.removeNodeFromParent((FileMutableTreeNode) childrenChildren.nextElement());
+                            Iterator<? extends TreeNode> iterator = children.nextElement().children().asIterator();
+                            while (iterator.hasNext()) {
+                                FileMutableTreeNode fileMutableTreeNode = (FileMutableTreeNode) iterator.next();
+                                removeList.add(fileMutableTreeNode);
+                            }
+                        }
+                        if (!removeList.isEmpty()) {
+                            for (FileMutableTreeNode fileMutableTreeNode : removeList) {
+                                fileTreeModel.removeNodeFromParent(fileMutableTreeNode);
                             }
                         }
                     }
