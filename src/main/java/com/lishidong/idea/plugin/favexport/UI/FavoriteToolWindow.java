@@ -2,7 +2,9 @@ package com.lishidong.idea.plugin.favexport.UI;
 
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.actionSystem.*;
+import com.intellij.openapi.fileEditor.OpenFileDescriptor;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.ui.JBPopupMenu;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import com.intellij.openapi.util.text.StringUtil;
@@ -20,15 +22,11 @@ import com.lishidong.idea.plugin.favexport.model.GlobalState;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import javax.swing.event.TreeSelectionEvent;
-import javax.swing.event.TreeSelectionListener;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeCellRenderer;
-import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreeNode;
+import javax.swing.tree.*;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Iterator;
@@ -351,13 +349,6 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
         // 定义目录列表
         fileTree.setModel(fileTreeModel);
         fileTree.setRootVisible(false);
-        // 添加事件监听
-        fileTree.addTreeSelectionListener(new TreeSelectionListener() {
-            @Override
-            public void valueChanged(TreeSelectionEvent e) {
-                System.out.println("选择");
-            }
-        });
 
         fileTree.setCellRenderer(new DefaultTreeCellRenderer() {
             @Override
@@ -372,30 +363,44 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
             }
         });
 
-        fileTree.addMouseListener(new MouseListener() {
+        // 创建右键菜单
+        JBPopupMenu popupMenu = new JBPopupMenu();
+        JMenuItem openMenuItem = new JMenuItem("打开文件", AllIcons.Actions.MenuOpen);
+        openMenuItem.addActionListener(new AbstractAction() {
             @Override
-            public void mouseClicked(MouseEvent e) {
-
+            public void actionPerformed(ActionEvent e) {
+                // 获取选中的节点
+                FileMutableTreeNode[] selectedNodes = fileTree.getSelectedNodes(FileMutableTreeNode.class, node -> node.file != null);
+                for (FileMutableTreeNode selectedNode : selectedNodes) {
+                    new OpenFileDescriptor(project, selectedNode.file).navigate(true);
+                }
             }
+        });
+        popupMenu.add(openMenuItem);
+
+        // 鼠标事件监听
+        fileTree.addMouseListener(new MouseAdapter() {
 
             @Override
             public void mousePressed(MouseEvent e) {
-
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-
-            }
-
-            @Override
-            public void mouseEntered(MouseEvent e) {
-
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-
+                int x = e.getX();
+                int y = e.getY();
+                // 判断位置
+                TreePath pathForLocation = fileTree.getPathForLocation(x, y);
+                if (pathForLocation != null) {
+                    // 在右键点击的位置弹出菜单
+                    if (e.getButton() == MouseEvent.BUTTON3) {
+                        popupMenu.show(fileTree, x, y);
+                    }
+                    // 左键双击,打开文件
+                    if (e.getButton() == MouseEvent.BUTTON1 && e.getClickCount() == 2) {
+                        // 打开选中文件
+                        FileMutableTreeNode[] selectedNodes = fileTree.getSelectedNodes(FileMutableTreeNode.class, node -> node.file != null);
+                        if (selectedNodes.length > 0) {
+                            new OpenFileDescriptor(project, selectedNodes[0].file).navigate(true);
+                        }
+                    }
+                }
             }
         });
 
