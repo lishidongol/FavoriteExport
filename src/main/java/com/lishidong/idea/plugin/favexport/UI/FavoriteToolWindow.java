@@ -8,6 +8,7 @@ import com.intellij.openapi.ui.JBPopupMenu;
 import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.ui.SimpleToolWindowPanel;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.wm.ToolWindow;
 import com.intellij.openapi.wm.ToolWindowFactory;
 import com.intellij.ui.components.JBLabel;
@@ -16,9 +17,12 @@ import com.intellij.ui.components.JBScrollPane;
 import com.intellij.ui.content.ContentFactory;
 import com.intellij.ui.treeStructure.Tree;
 import com.intellij.util.IconUtil;
+import com.lishidong.idea.plugin.favexport.listener.CompileDoneListener;
 import com.lishidong.idea.plugin.favexport.listener.FilesChangeListener;
+import com.lishidong.idea.plugin.favexport.listener.FilesCompileListener;
 import com.lishidong.idea.plugin.favexport.model.FileMutableTreeNode;
 import com.lishidong.idea.plugin.favexport.model.GlobalState;
+import com.lishidong.idea.plugin.favexport.util.FavUtil;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
@@ -55,15 +59,18 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
     @Override
     public void createToolWindowContent(@NotNull Project project, @NotNull ToolWindow toolWindow) {
         this.project = project;
-        SimpleToolWindowPanel categoryPanel = createCategoryPanel(project);
-        toolWindow.getContentManager().addContent(contentFactory.createContent(categoryPanel, "目录", true));
-        SimpleToolWindowPanel modulePanel = createModulePanel(project);
-        toolWindow.getContentManager().addContent(contentFactory.createContent(modulePanel, "模块", true));
         SimpleToolWindowPanel fileTreePanel = createFileTreePanel(project);
         toolWindow.getContentManager().addContent(contentFactory.createContent(fileTreePanel, "文件", true));
 
+        SimpleToolWindowPanel categoryPanel = createCategoryPanel(project);
+        toolWindow.getContentManager().addContent(contentFactory.createContent(categoryPanel, "目录", true));
+
+        SimpleToolWindowPanel modulePanel = createModulePanel(project);
+        toolWindow.getContentManager().addContent(contentFactory.createContent(modulePanel, "模块", true));
+
         // 创建事件监听
         this.project.getMessageBus().connect().subscribe(FilesChangeListener.TOPIC, this);
+        this.project.getMessageBus().connect().subscribe(FilesCompileListener.TOPIC, new CompileDoneListener(this.project));
     }
 
     /**
@@ -293,16 +300,13 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
                 if (lastSelectedPathComponent != null) {
                     if (lastSelectedPathComponent.file != null) {
                         // 文件,删除对应文件名称文件，并刷新目录树
-                        GlobalState.getInstance(project).files.removeIf(favoriteFile -> lastSelectedPathComponent.category.equals(favoriteFile.getCategory())
-                                && lastSelectedPathComponent.module.equals(favoriteFile.getModule())
-                                && lastSelectedPathComponent.getFilepath().equals(favoriteFile.getFilepath()));
+                        GlobalState.getInstance(project).files.removeIf(favoriteFile -> lastSelectedPathComponent.category.equals(favoriteFile.getCategory()) && lastSelectedPathComponent.module.equals(favoriteFile.getModule()) && lastSelectedPathComponent.getFilepath().equals(favoriteFile.getFilepath()));
                         // 更新树节点
                         fileTreeModel.removeNodeFromParent(lastSelectedPathComponent);
                     }
                     else if (!StringUtil.isEmptyOrSpaces(lastSelectedPathComponent.module)) {
                         // 删除模块下的文件
-                        GlobalState.getInstance(project).files.removeIf(favoriteFile -> lastSelectedPathComponent.category.equals(favoriteFile.getCategory())
-                                && lastSelectedPathComponent.module.equals(favoriteFile.getModule()));
+                        GlobalState.getInstance(project).files.removeIf(favoriteFile -> lastSelectedPathComponent.category.equals(favoriteFile.getCategory()) && lastSelectedPathComponent.module.equals(favoriteFile.getModule()));
                         // 更新树节点
                         lastSelectedPathComponent.removeAllChildren();
                         fileTreeModel.reload(lastSelectedPathComponent);
@@ -366,6 +370,7 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
         // 创建右键菜单
         JBPopupMenu popupMenu = new JBPopupMenu();
         JMenuItem openMenuItem = new JMenuItem("打开文件", AllIcons.Actions.MenuOpen);
+        JMenuItem exportMenuItem = new JMenuItem("导出", AllIcons.ToolbarDecorator.Export);
         openMenuItem.addActionListener(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -376,7 +381,22 @@ public class FavoriteToolWindow implements ToolWindowFactory, FilesChangeListene
                 }
             }
         });
+        exportMenuItem.addActionListener(new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // 获取选中的文件
+                FileMutableTreeNode[] selectedNodes = fileTree.getSelectedNodes(FileMutableTreeNode.class, node -> node.file != null);
+                // 转成file
+                List<VirtualFile> list = new ArrayList<>();
+                for (FileMutableTreeNode selectedNode : selectedNodes) {
+                    list.add(selectedNode.file);
+                }
+                // 弹出选择框
+                FavUtil.openFileSelect(project, list);
+            }
+        });
         popupMenu.add(openMenuItem);
+        popupMenu.add(exportMenuItem);
 
         // 鼠标事件监听
         fileTree.addMouseListener(new MouseAdapter() {
